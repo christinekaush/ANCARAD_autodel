@@ -1,0 +1,12 @@
+{
+    "operator": "HDFDataset",
+    "arguments": {
+        "data_path": "../data_070119.h5",
+        "batch_size": [16, 128, 128],
+        "val_group": "validation",
+        "preprocessor": {
+                "operator": "ChannelKeeperPreprocessor",
+                "arguments": {"channels": 0}
+        }
+    }
+}

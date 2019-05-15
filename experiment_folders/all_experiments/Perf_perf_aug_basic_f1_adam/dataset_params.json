@@ -1,0 +1,12 @@
+{
+    "operator": "HDFDataset",
+    "arguments": {
+        "data_path": "../data_070119_MRI_final.h5",
+        "batch_size": [16, 16, 16],
+        "val_group": "validation",
+        "preprocessor": {
+                "operator": "ChannelKeeperPreprocessor",
+                "arguments": {"channels": 4}
+        }
+    }
+}

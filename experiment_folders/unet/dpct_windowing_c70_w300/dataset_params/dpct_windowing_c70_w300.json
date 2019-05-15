@@ -1,0 +1,26 @@
+{
+    "operator": "HDFDataset",
+    "arguments": {
+        "data_path": "../data_070119.h5",
+        "batch_size": [16, 64, 64],
+        "val_group": "validation",
+        "preprocessor": {
+            "operator": "PreprocessingPipeline",
+            "arguments": {
+                "preprocessor_dicts": [
+                {
+                    "operator": "ChannelRemoverPreprocessor",
+                    "arguments": {"channel": 0}
+                },
+                {
+                    "operator": "HounsfieldWindowingPreprocessor",
+                    "arguments": {
+                        "window_width": 300,
+                        "window_center": 70
+                    }
+                }
+                ]
+            }
+        }
+    }
+}

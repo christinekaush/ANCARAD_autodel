@@ -1,0 +1,31 @@
+{
+    "operator": "HDFDataset",
+    "arguments": {
+        "data_path": "../data_070119.h5",
+        "batch_size": [16, 64, 64],
+        "val_group": "validation",
+        "preprocessor": {
+            "operator": "PreprocessingPipeline",
+            "arguments": {
+                "preprocessor_dicts": [
+                    {
+                        "operator": "ChannelKeeperPreprocessor",
+                        "arguments": {"channels": 2}
+                    },
+                    {
+                        "operator": "ElasticDeformPreprocesser",
+                        "arguments": {
+                            "channels": 2,
+                            "grid": 3,
+                            "std": 10
+                        }
+                        
+                    }
+                ]
+
+
+            }
+                
+        }
+    }
+}
