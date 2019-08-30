@@ -19,6 +19,10 @@ import argparse
 import json
 import yaml
 
+import random
+
+
+random.seed(999)
 
 def _load_file_using_module(path, module):
     if isinstance(path, str):
@@ -73,6 +77,8 @@ class SmartFormatter(argparse.HelpFormatter):
 
 
 if __name__ == "__main__":
+    import pandas as pd
+
     data_path, num_steps, name, eval_metric = parse_arguments()
     if name is None:
         name = load_json(data_path / "experiment_params.json")["name"]
@@ -98,7 +104,7 @@ if __name__ == "__main__":
             raise ValueError(
                 "The final evaluation metric must be a parameter of the network evaluator."
             )
-
+    next(experiment.dataset.train_data_reader.iterate_dataset_randomly())
     experiment.train(num_steps)
 
     if eval_metric is not None:
@@ -112,22 +118,41 @@ if __name__ == "__main__":
         #print(80 * "=")
         #final_result = result
 
-        import pandas as pd
-        evaluation_results = experiment.evaluate_model("val", best_it)
-        summary = pd.DataFrame(columns=["result"], index=list(evaluation_results.keys()))
         
-        print(f'{" All evaluation metrics at best iteration ":=^80s}')
-        for metric, (result, result_std) in evaluation_results.items():
-            summary["result"][metric] = str(result)+'+/-'+str(result_std)
-            
-            if 'MRI' in dataset_params['arguments']['data_path']:
-                summary["result"]['n_patients'] = 35
-            else:
-                summary["result"]['n_patients'] = 85
+    dataset_type = "val"
+    evaluation_results = experiment.evaluate_model(dataset_type, best_it)
+    summary = pd.DataFrame(columns=["result"], index=list(evaluation_results.keys()))
+    
+    dice_per_pat, dice_per_pat_std = experiment.get_dice_per_pat(dataset_type, dataset_params['arguments']['data_path'], best_it)
 
-            print(
-                f" Achieved a {metric:s} of {result:.3f}, with a standard "
-                f"deviation of {result_std:.3f}"
-            )
-        summary.to_csv('res'+name+'_'+str(best_it)+'.csv', sep=',', encoding='utf-8')
-        print(80 * "=")
+    print(f'{" All evaluation metrics at best iteration ":=^80s}')
+    for metric, (result, result_std) in evaluation_results.items():
+        summary["result"].loc[metric] = str(result)+'+/-'+str(result_std)
+        print(
+            f" Achieved a {metric:s} of {result:.3f}, with a standard "
+            f"deviation of {result_std:.3f}"
+        )
+
+        addon = ""
+        print(str(dataset_params['arguments']['data_path']))
+        if '_MRI_' in str(dataset_params['arguments']['data_path']):
+            n = 36
+            #addon = "_35"
+        else:
+            n = 85
+            #addon = "_85"
+    
+    add = pd.DataFrame(columns=["result"], index=["dice_per_pat", "n_patients"])
+    add["result"].loc["dice_per_pat"] = str(round(dice_per_pat, 3))+'+/-'+str(dice_per_pat_std)
+    add["result"].loc['n_patients'] = n
+    summary = pd.concat((summary, add), axis=0)
+    summary.to_csv(f'res{name}{addon}_{best_it}.csv', sep=',', encoding='utf-8')
+    print(80 * "=")
+
+    print(f'{" All evaluation metrics at best iteration ":=^80s}')
+    for metric, (result, result_std) in evaluation_results.items():
+        summary["result"].loc[metric] = str(result)+'+/-'+str(result_std)
+        print(
+            f" Achieved a {metric:s} of {result:.3f}, with a standard "
+            f"deviation of {result_std:.3f}"
+        )

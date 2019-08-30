@@ -33,8 +33,6 @@ class BaseReader(ABC):
         Parameters:
         -----------
         batch_size : int
-        group : str
-            Internal path to the h5 group where the data is.
         dataset : str
             Name of the h5 dataset which contains the data points.
         target : str
@@ -46,7 +44,8 @@ class BaseReader(ABC):
         """
         self.batch_size = batch_size
         self.prefetch = prefetch
-        self.preprocessor = self._get_preprocessor(preprocessor)
+        self.preprocessor = self._get_preprocessor(preprocessor, name)
+        self.name = name
 
         # The order in which the samples was drawn
         self.trained_order = []
@@ -80,14 +79,21 @@ class BaseReader(ABC):
     def __len__(self):
         return self._len
 
+
     @staticmethod
-    def _get_preprocessor(preprocessor):
+    def _get_preprocessor(preprocessor, name):
         if preprocessor is None:
             return get_preprocessor("Preprocessor")()
         elif isinstance(preprocessor, dict):
             operator = preprocessor["operator"]
-            kwargs = preprocessor.get("arguments", {})
-            return get_preprocessor(operator)(**kwargs)
+            if operator == "PreprocessingPipeline":
+                kwargs = preprocessor.get("arguments", {})
+                if name != "train_reader":
+                    kwargs["preprocessor_dicts"] = [preprocessor_dict for preprocessor_dict in kwargs["preprocessor_dicts"] if preprocessor_dict["operator"] != "ElasticDeformPreprocesser"]
+                return get_preprocessor(operator)(**kwargs)
+            else:
+                kwargs = preprocessor.get("arguments", {})
+                return get_preprocessor(operator)(**kwargs)
         else:
             raise ValueError("`preprocess` must be either `None` or a dict")
 

@@ -5,12 +5,19 @@ TODO: BATCH NORM WILL NOW THINK WE ARE TRAINING IF WE WANT TO COMPUTE PERFORMANC
 __author__ = "Yngve Mardal Moe"
 __email__ = "yngve.m.moe@gmail.com"
 
+"""
+Modifications made by 
+__author__ = "Christine Kiran Kaushal
+__email__ = "christine.kiran@gmail.com
+"""
 
 import itertools
 import tensorflow as tf
 import numpy as np
 import h5py
+from scipy.spatial.distance import directed_hausdorff
 from .._backend_utils import SubclassRegister
+import pandas as pd
 
 
 evaluator_register = SubclassRegister("model evaluator")
@@ -84,6 +91,7 @@ class BinaryClassificationEvaluator(ClassificationEvaluator):
             self.precision = self._init_precision()
             self.recall = self.sensitivity
             self.dice = self._init_dice()
+#            self.hausdorff = self._init_hausdorff()
 
     def _init_num_elements(self):
         with tf.variable_scope("num_elements"):
@@ -154,6 +162,10 @@ class BinaryClassificationEvaluator(ClassificationEvaluator):
             )
         return dice
 
+#    def _init_hausdorff(self):
+#        with tf.variable_scope("hausdorff"):
+#            hausdorff = directed_hausdorff(self.prediction, self.target)[0]
+#        return hausdorff
 
 class NetworkTester:
     """Used to compute the final performance of the network.
@@ -236,7 +248,7 @@ class NetworkTester:
         feed_dict = self.get_feed_dict(dataset_type)
         num_its = self.get_numits(dataset_type)
         dataset = self.get_dataset(dataset_type)
-        print(len(dataset))
+        #print(len(dataset))
 
         performances = []
         for i in range(num_its):
@@ -324,6 +336,41 @@ class NetworkTester:
                     self._update_outputs(
                         outputs, it_num=it, h5=h5, dataset_type=dataset_type
                     )
+    def dice_per_pat(self, dataset_type, h5_dataset, sess, save_probabilities=False):     
+        dataset = self.get_dataset(dataset_type)
+        data_len = len(dataset)
+        batch_size = dataset.batch_size
+        num_its = self.get_numits(dataset_type)
+        feed_dict = self.get_feed_dict(dataset_type)
+
+        prediction_op = self.evaluator.prediction
+        if save_probabilities:
+            prediction_op = self.evaluator.probabilities
+        
+        run_ops = {"idxes": self.dataset.idxes,
+        **self.performance_ops}
+        outputs = sess.run(run_ops, feed_dict=feed_dict)
+
+        fp = outputs['false_positives']
+        tp = outputs['true_positives']
+        tn = outputs['true_negatives']
+        fn = outputs['false_negatives']
+
+        with h5py.File(h5_dataset, 'r') as g:
+            patids = g["validation" if dataset_type == "val" else "test"]['pat_ids'][...]
+        idxes = outputs["idxes"]
+        patids = patids[idxes]
+
+        df = pd.DataFrame({'patient': patids, 'fn': fn, 'fp': fp, 'tp': tp, 'tn': tn})
+        df['dice'] = 2*df['tp']/(2*df['tp'] + df['fn'] + df['fp'])
+        perpatient = df.groupby('patient').sum()
+
+        mean = 2*perpatient['tp']/(2*perpatient['tp'] + perpatient['fn'] + perpatient['fp'])
+        mean_std = np.mean(df[['patient', 'dice']].groupby('patient').std())[0]
+        print(f'Mean Dice per patient: {mean}')
+        print(f'std: {mean_std}')
+    
+        return np.mean(2*perpatient['tp']/(2*perpatient['tp'] + perpatient['fn'] + perpatient['fp'])), mean_std
 
 
 if __name__ == "__main__":

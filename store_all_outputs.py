@@ -15,7 +15,7 @@ log_folder = Path(args.log_folder)
 for log in tqdm(log_folder.iterdir()):
     foldername = log.name
     experimentname = '_'.join(foldername.split('_')[:-1])
-    experimentname = Path(r'experiment_folders\all_experiments')/experimentname
+    experimentname = Path(r'experiment_folders\paper\cv1')/experimentname
     experimentnum = foldername.split('_')[-1]
     try:
         if args.store_outputs:

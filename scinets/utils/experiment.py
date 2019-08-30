@@ -247,11 +247,11 @@ class NetworkExperiment:
     def train(self, num_steps, init_logger_kwargs=None):
         """Train the specified model for the given number of steps.
         """
-        iterator = trange if self.verbose else range
+        _range = trange if self.verbose else range
         num_vals = num_steps // self.val_interval
         with tf.Session() as session:
             self._init_session(session, logger_kwargs=init_logger_kwargs)
-            for i in iterator(num_vals):
+            for i in _range(num_vals):
                 self._train_its(session)
 
     def evaluate_model(self, dataset_type, step_num=None):
@@ -330,6 +330,11 @@ class NetworkExperiment:
         with tf.Session() as session:
             self._init_session(session, continue_old=True, step_num=step_num)
             self.network_tester.save_outputs(dataset_type, filename, session)
+
+    def get_dice_per_pat(self, dataset_type, dataset, step_num):
+        with tf.Session() as session:
+            self._init_session(session, continue_old=True, step_num=step_num)
+            return self.network_tester.dice_per_pat(dataset_type, dataset, session)
 
 
 class MNISTExperiment(NetworkExperiment):

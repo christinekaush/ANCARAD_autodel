@@ -86,14 +86,13 @@ if __name__ == "__main__":
     
     name = load_json(data_path / "experiment_params.json")["name"]
 
-
     dataset_params = load_json(data_path / "dataset_params.json")
     model_params = load_json(data_path / "model_params.json")
     trainer_params = load_json(data_path / "trainer_params.json")
     log_params = load_json(data_path / "log_params.json")
     experiment_params = load_json(data_path / "experiment_params.json")
     experiment_params["name"] += f"_{model_version}"
-    print("Experiment_name")
+    print("Experiment_name:"+name)
     experiment_params["continue_old"] = True
 
     from scinets.utils.experiment import NetworkExperiment
@@ -121,22 +120,31 @@ if __name__ == "__main__":
     import pandas as pd
     evaluation_results = experiment.evaluate_model(dataset_type, best_it)
     summary = pd.DataFrame(columns=["result"], index=list(evaluation_results.keys()))
-    
+
+    dice_per_pat, dice_per_pat_std = experiment.get_dice_per_pat(dataset_type, dataset_params['arguments']['data_path'], best_it)
+
     print(f'{" All evaluation metrics at best iteration ":=^80s}')
     for metric, (result, result_std) in evaluation_results.items():
-        summary["result"][metric] = str(result)+'+/-'+str(result_std)
-        if '_MRI_' in str(dataset_params['arguments']['data_path']):
-            summary["result"]['n_patients'] = 35
-            addon = 35
-        else:
-            summary["result"]['n_patients'] = 85
-            addon = 85
-
+        summary["result"].loc[metric] = str(round(result, 3))+'+/-'+str(round(result_std,3))
         print(
             f" Achieved a {metric:s} of {result:.3f}, with a standard "
             f"deviation of {result_std:.3f}"
         )
-    summary.to_csv(f'res{name}_{addon}_{best_it}.csv', sep=',', encoding='utf-8')
+
+    addon = ""
+    print(str(dataset_params['arguments']['data_path']))
+    if '_MRI_' in str(dataset_params['arguments']['data_path']):
+        n = 36
+        #addon = "_35"
+    else:
+        n = 85
+        #addon = "_85"
+
+    add = pd.DataFrame(columns=["result"], index=["dice_per_pat", "n_patients"])
+    add["result"].loc["dice_per_pat"] = str(round(dice_per_pat, 3))+'+/-'+str(round(dice_per_pat_std,3))
+    add["result"].loc['n_patients'] = n
+    summary = pd.concat((summary, add), axis=0)
+    summary.to_csv(f'res{name}{addon}_{best_it}.csv', sep=',', encoding='utf-8')
     print(80 * "=")
 
     if storefile is not None:

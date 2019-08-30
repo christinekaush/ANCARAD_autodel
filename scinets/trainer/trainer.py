@@ -18,7 +18,7 @@ class NetworkTrainer:
         log_dir="./logs",
         train_op=None,
         learning_rate_scheduler=None,
-        max_checkpoints=10,
+        max_checkpoints=21,
         save_step=3,
         verbose=True,
     ):
@@ -96,6 +96,7 @@ class NetworkTrainer:
         iterations = np.arange(self.num_steps, self.num_steps + num_steps + 1)
         for i in range(num_steps):
             output[i], _ = self.train_step(session, additional_ops=additional_ops)
+            
         return output, iterations
 
     def train_step(self, session, additional_ops=None, feed_dict=None):
@@ -122,6 +123,7 @@ class NetworkTrainer:
         feed_dict = {} if feed_dict is None else feed_dict
         feed_dict = {self.model.is_training: True, **feed_dict}
 
+        #from pdb import set_trace; set_trace()
         output = session.run(run_list, feed_dict=feed_dict)[1:]
         self.num_steps += 1
         if self.should_save:
